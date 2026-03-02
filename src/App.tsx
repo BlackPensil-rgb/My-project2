@@ -2,57 +2,43 @@ import React, { useState, useEffect } from 'react';
 import styled, { keyframes, createGlobalStyle } from 'styled-components';
 import { ALL_GIFTS } from './GiftsData';
 
-// --- ГЛОБАЛЬНЫЕ СТИЛИ ---
 const GlobalStyle = createGlobalStyle`
   body { margin: 0; background: #000; font-family: 'Inter', sans-serif; color: #fff; overflow-x: hidden; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 `;
 
-// --- АНИМАЦИИ ---
-const fadeIn = keyframes`from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); }`;
-const float = keyframes`0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); }`;
-const pulse = keyframes`0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); }`;
+const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
+const popIn = keyframes`0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; }`;
 
-// --- СТИЛИ ИНТЕРФЕЙСА ---
 const AppContainer = styled.div`min-height: 100vh; padding: 20px 20px 140px 20px; max-width: 500px; margin: 0 auto;`;
 
-const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 50; padding: 10px 0;`;
-const Logo = styled.div`font-size: 22px; font-weight: 900; letter-spacing: -1px; color: #fff;`;
-const Balance = styled.div`background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 25px; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; color: #00d2ff; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.1);`;
+const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;`;
+const Balance = styled.div`background: #111; border: 1px solid #222; padding: 10px 18px; border-radius: 25px; color: #00d2ff; font-weight: 800;`;
 
 const CaseGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr; gap: 15px;`;
 
 const CaseCard = styled.div<{ $color: string }>`
-  background: linear-gradient(180deg, #111 0%, #050505 100%);
-  border-radius: 30px; padding: 30px 15px; text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.03); position: relative;
-  transition: transform 0.2s; animation: ${fadeIn} 0.5s ease;
-
+  background: #0a0a0a; border-radius: 30px; padding: 25px 10px; text-align: center;
+  border: 1px solid ${p => p.$color}33; position: relative;
   &:active { transform: scale(0.95); }
-  &::after { content: ''; position: absolute; inset: 0; border-radius: 30px; border: 1px solid ${p => p.$color}; opacity: 0.15; }
 `;
 
-const CaseIcon = styled.div`font-size: 60px; margin-bottom: 15px; animation: ${float} 3s ease-in-out infinite; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));`;
-const CaseTitle = styled.div`font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;`;
-const PriceTag = styled.div`font-size: 13px; color: #666; font-weight: 700;`;
-
-const WinOverlay = styled.div`position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: ${fadeIn} 0.3s; padding: 20px; text-align: center;`;
+const WinOverlay = styled.div`
+  position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; 
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  animation: ${fadeIn} 0.3s;
+`;
 
 const BottomNav = styled.div`
-  position: fixed; bottom: 25px; left: 20px; right: 20px; height: 75px;
-  background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(20px);
-  border-radius: 35px; border: 1px solid rgba(255,255,255,0.08);
-  display: flex; justify-content: space-around; align-items: center; z-index: 100;
+  position: fixed; bottom: 25px; left: 20px; right: 20px; height: 70px;
+  background: rgba(15,15,15,0.9); backdrop-filter: blur(10px); border-radius: 30px;
+  display: flex; justify-content: space-around; align-items: center; border: 1px solid #222;
 `;
 
 const NavItem = styled.div<{ $active: boolean }>`
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  color: ${p => p.$active ? '#fff' : '#444'}; opacity: ${p => p.$active ? 1 : 0.6};
-  transition: 0.3s; font-size: 24px;
-  label { font-size: 10px; font-weight: 900; text-transform: uppercase; }
+  color: ${p => p.$active ? '#00d2ff' : '#444'}; text-align: center; font-size: 10px; font-weight: 900;
 `;
 
-// --- ДАННЫЕ КЕЙСОВ (Твой полный список) ---
 const CASES_DATA = [
   { id: 1, name: 'БЫСТРЫЙ СТАРТ', price: 100, color: '#00d2ff', icon: '🍶' },
   { id: 2, name: 'ПРОДВИНУТЫЙ', price: 250, color: '#00ff88', icon: '🧪' },
@@ -85,22 +71,27 @@ export default function App() {
   }, [fat, inventory]);
 
   const handleOpen = (c: any) => {
-    if (fat < c.price) return alert("❌ Братан, маловато ЖИРА!");
+    if (fat < c.price) return alert("❌ Мало ЖИРА!");
+    
     setOpening(true);
     
+    // Имитация открытия
     setTimeout(() => {
-      // Логика выпадения из ALL_GIFTS
-      const range = c.id === 5 ? 101 : 40;
-      const luckyIndex = Math.floor(Math.random() * Math.min(range, ALL_GIFTS.length));
-      const gift = ALL_GIFTS[luckyIndex];
+      try {
+        const range = c.id === 5 ? 101 : 40;
+        const index = Math.floor(Math.random() * Math.min(range, ALL_GIFTS.length));
+        const gift = ALL_GIFTS[index] || ALL_GIFTS[0]; // Если вдруг индекс битый, даем первый подарок
 
-      if (gift) {
-        setFat(f => f - c.price);
+        setFat(prev => prev - c.price);
         setInventory(prev => [gift, ...prev]);
         setWinItem(gift);
+      } catch (e) {
+        console.error(e);
+        alert("Ошибка при открытии!");
+      } finally {
+        setOpening(false);
       }
-      setOpening(false);
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -108,17 +99,17 @@ export default function App() {
       <GlobalStyle />
       <AppContainer>
         <Header>
-          <Logo>GIFT FUN</Logo>
-          <Balance>🍶 {fat.toLocaleString()} ЖИР</Balance>
+          <div style={{fontWeight: 900}}>GIFT FUN</div>
+          <Balance>🍶 {fat.toLocaleString()}</Balance>
         </Header>
 
         {tab === 'cases' && (
           <CaseGrid>
             {CASES_DATA.map(c => (
               <CaseCard key={c.id} $color={c.color} onClick={() => handleOpen(c)}>
-                <CaseIcon>{c.icon}</CaseIcon>
-                <CaseTitle style={{color: c.color}}>{c.name}</CaseTitle>
-                <PriceTag>{c.price} ЖИР</PriceTag>
+                <div style={{fontSize: '50px', marginBottom: '10px'}}>{c.icon}</div>
+                <div style={{fontSize: '11px', fontWeight: 900, color: c.color}}>{c.name}</div>
+                <div style={{fontSize: '12px', color: '#555'}}>{c.price} ЖИР</div>
               </CaseCard>
             ))}
           </CaseGrid>
@@ -126,41 +117,44 @@ export default function App() {
 
         {tab === 'profile' && (
           <div>
-            <h2 style={{fontSize: '20px', fontWeight: 900, marginBottom: '20px', textAlign: 'center'}}>📦 ИНВЕНТАРЬ ({inventory.length})</h2>
+            <h3 style={{textAlign: 'center', marginBottom: '20px'}}>ИНВЕНТАРЬ ({inventory.length})</h3>
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px'}}>
               {inventory.map((item, i) => (
-                <div key={i} style={{background: '#0d0d0d', padding: '15px', border: '1px solid #1a1a1a', borderRadius: '20px', textAlign: 'center'}}>
-                  <div style={{fontSize: '35px'}}>{item.emoji}</div>
-                  <div style={{fontSize: '9px', color: '#555', marginTop: '5px', fontWeight: 800}}>{item.name}</div>
+                <div key={i} style={{background: '#111', padding: '15px', borderRadius: '15px', textAlign: 'center', border: '1px solid #222'}}>
+                  <div style={{fontSize: '30px'}}>{item.emoji}</div>
+                  <div style={{fontSize: '8px', color: '#666', marginTop: '5px'}}>{item.name}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* ЭКРАНЫ ОЖИДАНИЯ И ВЫИГРЫША */}
+        {/* Экран процесса (чтобы не было просто черного фона) */}
         {opening && (
           <WinOverlay>
-            <div style={{fontSize: '100px', animation: pulse + ' 0.8s infinite'}}>📦</div>
-            <h2 style={{letterSpacing: '5px', marginTop: '30px', fontWeight: 900}}>ОТКРЫВАЕМ...</h2>
+            <div style={{fontSize: '80px', animation: 'spin 2s linear infinite'}}>🍶</div>
+            <h2 style={{marginTop: '20px', letterSpacing: '3px'}}>ЖИРИМ...</h2>
           </WinOverlay>
         )}
 
+        {/* Экран победы */}
         {winItem && (
           <WinOverlay onClick={() => setWinItem(null)}>
-            <div style={{fontSize: '120px', animation: fadeIn + ' 0.5s ease'}}>{winItem.emoji}</div>
-            <h1 style={{fontSize: '36px', fontWeight: 900, margin: '20px 0 10px 0'}}>ЧИНАЗЕС!</h1>
-            <p style={{fontSize: '18px', color: '#00d2ff', fontWeight: 800}}>{winItem.name}</p>
-            <button style={{marginTop: '40px', padding: '18px 50px', borderRadius: '25px', background: '#fff', color: '#000', border: 'none', fontWeight: 900, fontSize: '16px'}}>В ИНВЕНТАРЬ</button>
+            <div style={{animation: `${popIn} 0.5s ease-out`, textAlign: 'center'}}>
+              <div style={{fontSize: '120px'}}>{winItem.emoji}</div>
+              <h1 style={{fontSize: '32px', margin: '20px 0'}}>ВЫПАЛО!</h1>
+              <p style={{color: '#00d2ff', fontWeight: 800}}>{winItem.name}</p>
+              <button style={{marginTop: '40px', padding: '15px 40px', borderRadius: '20px', background: '#fff', border: 'none', fontWeight: 900}}>ЗАБРАТЬ</button>
+            </div>
           </WinOverlay>
         )}
 
         <BottomNav>
-          <NavItem $active={tab === 'cases'} onClick={() => setTab('cases')}><span>📦</span><label>Кейсы</label></NavItem>
-          <NavItem $active={tab === 'rocket'} onClick={() => setTab('rocket')}><span>🚀</span><label>Ракета</label></NavItem>
-          <NavItem $active={tab === 'profile'} onClick={() => setTab('profile')}><span>👤</span><label>Профиль</label></NavItem>
+          <NavItem $active={tab === 'cases'} onClick={() => setTab('cases')}><div>📦</div>КЕЙСЫ</NavItem>
+          <NavItem $active={tab === 'rocket'} onClick={() => setTab('rocket')}><div>🚀</div>РАКЕТА</NavItem>
+          <NavItem $active={tab === 'profile'} onClick={() => setTab('profile')}><div>👤</div>ПРОФИЛЬ</NavItem>
         </BottomNav>
       </AppContainer>
     </>
   );
-   }
+}
