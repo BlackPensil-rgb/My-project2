@@ -1,18 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes, createGlobalStyle } from 'styled-components';
-import { ALL_GIFTS } from './GiftsData';
 
+// --- ГЛОБАЛЬНЫЕ СТИЛИ ---
 const GlobalStyle = createGlobalStyle`
-  body { margin: 0; background: #000; font-family: 'Inter', sans-serif; color: #fff; overflow-x: hidden; }
+  body { margin: 0; background: #000; font-family: 'Inter', -apple-system, sans-serif; color: #fff; overflow-x: hidden; user-select: none; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 `;
 
+// --- АНИМАЦИИ ---
 const fadeIn = keyframes`from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); }`;
 const popIn = keyframes`0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; }`;
+const spin = keyframes`from { transform: rotate(0deg); } to { transform: rotate(360deg); }`;
 
+// --- ГЕНЕРАТОР ПОДАРКОВ (ВШИТ В КОД) ---
+const tgEmojis = ["🧸", "🍷", "💍", "🌹", "💎", "🎁", "👑", "🦁", "🚗", "🏠", "🛥️", "🚀", "🏝️", "🍾", "🎸", "⌚", "🏆", "🎰", "💰", "🧿"];
+const GENERATED_GIFTS = Array.from({ length: 101 }, (_, i) => ({
+  id: i + 1,
+  name: i === 0 ? "Мишка" : i === 100 ? "🔥 DEPARTMENT" : `Подарок #${i + 1}`,
+  emoji: i === 0 ? "🧸" : i === 100 ? "🏛️" : tgEmojis[i % tgEmojis.length],
+  price: (i + 1) * 500
+}));
+
+// --- СТИЛИ ---
 const AppContainer = styled.div`min-height: 100vh; padding: 20px 20px 140px 20px; max-width: 500px; margin: 0 auto;`;
 const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;`;
-const Balance = styled.div`background: #111; border: 1px solid #222; padding: 10px 18px; border-radius: 25px; color: #00d2ff; font-weight: 800; font-size: 15px;`;
+const Balance = styled.div`background: #111; border: 1px solid #222; padding: 10px 18px; border-radius: 25px; color: #00d2ff; font-weight: 800; font-size: 15px; box-shadow: 0 0 20px rgba(0,210,255,0.1);`;
 
 const CaseGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr; gap: 15px;`;
 const CaseCard = styled.div<{ $color: string }>`
@@ -36,7 +48,7 @@ const NavItem = styled.div<{ $active: boolean }>`
   label { font-size: 10px; font-weight: 900; text-transform: uppercase; margin-top: 4px; display: block; }
 `;
 
-// --- ВСЕ 16 КЕЙСОВ ---
+// --- ДАННЫЕ КЕЙСОВ ---
 const CASES_DATA = [
   { id: 1, name: 'БЫСТРЫЙ СТАРТ', price: 100, color: '#00d2ff', icon: '🍶' },
   { id: 2, name: 'ПРОДВИНУТЫЙ', price: 250, color: '#00ff88', icon: '🧪' },
@@ -62,7 +74,6 @@ export default function App() {
   const [inventory, setInventory] = useState<any[]>(() => JSON.parse(localStorage.getItem('inv') || '[]'));
   const [status, setStatus] = useState<'idle' | 'opening' | 'win'>('idle');
   const [winItem, setWinItem] = useState<any>(null);
-  const [promo, setPromo] = useState('');
 
   useEffect(() => {
     localStorage.setItem('fat', fat.toString());
@@ -74,7 +85,7 @@ export default function App() {
     setStatus('opening');
     setTimeout(() => {
       const range = c.id === 5 ? 101 : 40;
-      const gift = ALL_GIFTS[Math.floor(Math.random() * Math.min(range, ALL_GIFTS.length))] || ALL_GIFTS[0];
+      const gift = GENERATED_GIFTS[Math.floor(Math.random() * range)];
       setFat(prev => prev - c.price);
       setInventory(prev => [gift, ...prev]);
       setWinItem(gift);
@@ -111,11 +122,6 @@ export default function App() {
               <div style={{color: '#00d2ff', fontWeight: 800, marginTop: '5px'}}>🍶 {fat.toLocaleString()} ЖИР</div>
             </div>
             
-            <div style={{background: '#0a0a0a', padding: '15px', borderRadius: '20px', marginBottom: '20px', border: '1px solid #111'}}>
-              <input placeholder="Введи промокод..." value={promo} onChange={e => setPromo(e.target.value)} style={{width: '100%', padding: '12px', background: '#000', border: '1px solid #222', color: '#fff', borderRadius: '12px', marginBottom: '10px'}} />
-              <button style={{width: '100%', padding: '12px', background: '#00d2ff', border: 'none', borderRadius: '12px', fontWeight: 900}}>АКТИВИРОВАТЬ</button>
-            </div>
-
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px'}}>
               {inventory.map((item, i) => (
                 <div key={i} style={{background: '#0d0d0d', padding: '15px', borderRadius: '18px', textAlign: 'center', border: '1px solid #1a1a1a'}}>
@@ -128,7 +134,7 @@ export default function App() {
         )}
 
         {status === 'opening' && (
-          <Overlay><div style={{fontSize: '80px', animation: 'spin 2s linear infinite'}}>🍶</div><h2 style={{marginTop: '20px', letterSpacing: '4px'}}>ЖИРИМ...</h2></Overlay>
+          <Overlay><div style={{fontSize: '80px', animation: `${spin} 2s linear infinite`}}>🍶</div><h2 style={{marginTop: '20px', letterSpacing: '4px'}}>ЖИРИМ...</h2></Overlay>
         )}
 
         {status === 'win' && winItem && (
@@ -144,7 +150,6 @@ export default function App() {
 
         <BottomNav>
           <NavItem $active={tab === 'cases'} onClick={() => setTab('cases')}><div>📦</div><label>Кейсы</label></NavItem>
-          <NavItem $active={tab === 'rocket'} onClick={() => setTab('rocket')}><div>🚀</div><label>Ракета</label></NavItem>
           <NavItem $active={tab === 'profile'} onClick={() => setTab('profile')}><div>👤</div><label>Профиль</label></NavItem>
         </BottomNav>
       </AppContainer>
