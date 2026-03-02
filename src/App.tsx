@@ -1,26 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, createGlobalStyle } from 'styled-components';
 import { ALL_GIFTS } from './GiftsData';
 
+// --- ГЛОБАЛЬНЫЕ СТИЛИ ---
+const GlobalStyle = createGlobalStyle`
+  body { margin: 0; background: #000; font-family: 'Inter', sans-serif; color: #fff; overflow-x: hidden; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+`;
+
 // --- АНИМАЦИИ ---
-const shake = keyframes`
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  20% { transform: translate(-3px, 0px) rotate(-1deg); }
-  50% { transform: translate(-1px, 2px) rotate(1deg); }
-  100% { transform: translate(1px, -2px) rotate(0deg); }
+const fadeIn = keyframes`from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); }`;
+const float = keyframes`0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); }`;
+const pulse = keyframes`0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); }`;
+
+// --- СТИЛИ ИНТЕРФЕЙСА ---
+const AppContainer = styled.div`min-height: 100vh; padding: 20px 20px 140px 20px; max-width: 500px; margin: 0 auto;`;
+
+const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 50; padding: 10px 0;`;
+const Logo = styled.div`font-size: 22px; font-weight: 900; letter-spacing: -1px; color: #fff;`;
+const Balance = styled.div`background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 25px; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; color: #00d2ff; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.1);`;
+
+const CaseGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr; gap: 15px;`;
+
+const CaseCard = styled.div<{ $color: string }>`
+  background: linear-gradient(180deg, #111 0%, #050505 100%);
+  border-radius: 30px; padding: 30px 15px; text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.03); position: relative;
+  transition: transform 0.2s; animation: ${fadeIn} 0.5s ease;
+
+  &:active { transform: scale(0.95); }
+  &::after { content: ''; position: absolute; inset: 0; border-radius: 30px; border: 1px solid ${p => p.$color}; opacity: 0.15; }
 `;
 
-// --- СТИЛИ ---
-const AppContainer = styled.div`background: #000; color: white; min-height: 100vh; font-family: 'Inter', sans-serif; padding: 20px 20px 120px 20px;`;
-const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;`;
-const FatBalance = styled.div`background: #0a0a0a; padding: 10px 20px; border-radius: 25px; border: 1px solid #ffffff22; color: #fff; font-weight: 900; display: flex; align-items: center; gap: 8px;`;
-const GameCard = styled.div<{ $color: string; $isOpening?: boolean }>`
-  background: #080808; border-radius: 20px; margin-bottom: 15px; padding: 20px; display: flex; justify-content: space-between; align-items: center; 
-  border: 1px solid #151515; cursor: pointer; animation: ${props => props.$isOpening ? shake : 'none'} 0.5s infinite;
-`;
-const Badge = styled.span`background: linear-gradient(90deg, #ffd700, #ff8c00); padding: 2px 8px; border-radius: 5px; font-size: 10px; color: #000; font-weight: 900;`;
+const CaseIcon = styled.div`font-size: 60px; margin-bottom: 15px; animation: ${float} 3s ease-in-out infinite; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));`;
+const CaseTitle = styled.div`font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;`;
+const PriceTag = styled.div`font-size: 13px; color: #666; font-weight: 700;`;
 
-// --- ДАННЫЕ КЕЙСОВ ---
+const WinOverlay = styled.div`position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: ${fadeIn} 0.3s; padding: 20px; text-align: center;`;
+
+const BottomNav = styled.div`
+  position: fixed; bottom: 25px; left: 20px; right: 20px; height: 75px;
+  background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(20px);
+  border-radius: 35px; border: 1px solid rgba(255,255,255,0.08);
+  display: flex; justify-content: space-around; align-items: center; z-index: 100;
+`;
+
+const NavItem = styled.div<{ $active: boolean }>`
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: ${p => p.$active ? '#fff' : '#444'}; opacity: ${p => p.$active ? 1 : 0.6};
+  transition: 0.3s; font-size: 24px;
+  label { font-size: 10px; font-weight: 900; text-transform: uppercase; }
+`;
+
+// --- ДАННЫЕ КЕЙСОВ (Твой полный список) ---
 const CASES_DATA = [
   { id: 1, name: 'БЫСТРЫЙ СТАРТ', price: 100, color: '#00d2ff', icon: '🍶' },
   { id: 2, name: 'ПРОДВИНУТЫЙ', price: 250, color: '#00ff88', icon: '🧪' },
@@ -41,90 +73,94 @@ const CASES_DATA = [
 ];
 
 export default function App() {
-  const [tab, setTab] = useState('games');
-  const [fat, setFat] = useState(Number(localStorage.getItem('fat')) || 1500);
-  const [inventory, setInventory] = useState<any[]>(JSON.parse(localStorage.getItem('inv') || '[]'));
-  const [isOwner, setIsOwner] = useState(localStorage.getItem('isOwner') === 'true');
-  const [openingId, setOpeningId] = useState<number | null>(null);
-  const [promo, setPromo] = useState('');
+  const [tab, setTab] = useState('cases');
+  const [fat, setFat] = useState(() => Number(localStorage.getItem('fat')) || 1500);
+  const [inventory, setInventory] = useState<any[]>(() => JSON.parse(localStorage.getItem('inv') || '[]'));
+  const [opening, setOpening] = useState(false);
+  const [winItem, setWinItem] = useState<any>(null);
 
-  // Сохранение данных
   useEffect(() => {
     localStorage.setItem('fat', fat.toString());
     localStorage.setItem('inv', JSON.stringify(inventory));
   }, [fat, inventory]);
 
-  const claimDaily = () => {
-    const last = Number(localStorage.getItem('lastB')) || 0;
-    if (Date.now() - last < 86400000) return alert("❌ Жир еще не накопился!");
-    setFat(f => f + 20); localStorage.setItem('lastB', Date.now().toString());
-    alert("✅ +20 ЖИРА получено!");
-  };
-
   const handleOpen = (c: any) => {
-    if (fat < c.price) return alert("Мало ЖИРА!");
-    setOpeningId(c.id);
+    if (fat < c.price) return alert("❌ Братан, маловато ЖИРА!");
+    setOpening(true);
+    
     setTimeout(() => {
-      const gift = ALL_GIFTS[Math.floor(Math.random() * (c.id === 5 ? 101 : 40))];
-      setFat(f => f - c.price); setInventory(i => [gift, ...i]);
-      setOpeningId(null);
-      alert(`🎉 ВЫПАЛ: ${gift.emoji} ${gift.name}`);
+      // Логика выпадения из ALL_GIFTS
+      const range = c.id === 5 ? 101 : 40;
+      const luckyIndex = Math.floor(Math.random() * Math.min(range, ALL_GIFTS.length));
+      const gift = ALL_GIFTS[luckyIndex];
+
+      if (gift) {
+        setFat(f => f - c.price);
+        setInventory(prev => [gift, ...prev]);
+        setWinItem(gift);
+      }
+      setOpening(false);
     }, 1500);
   };
 
-  const activatePromo = () => {
-    if (promo === 'OwnerJir') { 
-      setIsOwner(true); localStorage.setItem('isOwner', 'true'); 
-      setFat(f => f + 100000000); alert("👑 СТАТУС OWNER АКТИВИРОВАН!");
-    } else if (promo === 'CHINAZES') {
-      setFat(f => f + 5000); alert("✅ +5000 ЖИРА!");
-    }
-    setPromo('');
-  };
-
   return (
-    <AppContainer>
-      <Header><div>GIFT FUN</div><FatBalance>🍶 {fat.toLocaleString()} ЖИР</FatBalance></Header>
+    <>
+      <GlobalStyle />
+      <AppContainer>
+        <Header>
+          <Logo>GIFT FUN</Logo>
+          <Balance>🍶 {fat.toLocaleString()} ЖИР</Balance>
+        </Header>
 
-      {tab === 'games' && (
-        <div>
-          <div onClick={claimDaily} style={{background: 'linear-gradient(90deg, #00d2ff, #3a7bd5)', padding: '15px', borderRadius: '15px', textAlign: 'center', fontWeight: '900', marginBottom: '20px'}}>🎁 ЕЖЕДНЕВНЫЙ БОНУС</div>
-          {CASES.map(c => (
-            <GameCard key={c.id} $color={c.color} $isOpening={openingId === c.id} onClick={() => handleOpen(c)}>
-              <div><div style={{fontSize: '18px', fontWeight: '900'}}>{c.name}</div><div style={{fontSize: '12px', color: '#444'}}>{c.price} ЖИР</div></div>
-              <div style={{fontSize: '40px'}}>{c.icon}</div>
-            </GameCard>
-          ))}
-        </div>
-      )}
+        {tab === 'cases' && (
+          <CaseGrid>
+            {CASES_DATA.map(c => (
+              <CaseCard key={c.id} $color={c.color} onClick={() => handleOpen(c)}>
+                <CaseIcon>{c.icon}</CaseIcon>
+                <CaseTitle style={{color: c.color}}>{c.name}</CaseTitle>
+                <PriceTag>{c.price} ЖИР</PriceTag>
+              </CaseCard>
+            ))}
+          </CaseGrid>
+        )}
 
-      {tab === 'profile' && (
-        <div>
-          <div style={{background: '#0a0a0a', padding: '20px', borderRadius: '20px', textAlign: 'center', marginBottom: '15px'}}>
-            <div style={{fontSize: '18px', fontWeight: '900'}}>ИГРОК {isOwner && <Badge>OWNER 👑</Badge>}</div>
-          </div>
-          <div style={{background: '#0a0a0a', padding: '15px', borderRadius: '20px', marginBottom: '15px'}}>
-            <input placeholder="Промокод..." value={promo} onChange={e => setPromo(e.target.value)} style={{width: '100%', padding: '10px', background: '#000', border: '1px solid #222', color: '#fff', borderRadius: '8px', marginBottom: '10px', boxSizing: 'border-box'}} />
-            <button onClick={activatePromo} style={{width: '100%', padding: '10px', background: '#00d2ff', border: 'none', borderRadius: '8px', fontWeight: 'bold'}}>АКТИВИРОВАТЬ</button>
-          </div>
-          <div style={{background: '#080808', padding: '15px', borderRadius: '20px', border: '1px dashed #222'}}>
-            <h4 style={{margin: '0 0 10px 0'}}>📦 ИНВЕНТАРЬ ({inventory.length})</h4>
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px'}}>
+        {tab === 'profile' && (
+          <div>
+            <h2 style={{fontSize: '20px', fontWeight: 900, marginBottom: '20px', textAlign: 'center'}}>📦 ИНВЕНТАРЬ ({inventory.length})</h2>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px'}}>
               {inventory.map((item, i) => (
-                <div key={i} style={{background: '#000', padding: '10px', borderRadius: '10px', textAlign: 'center', border: '1px solid #111'}}>
-                  <div style={{fontSize: '24px'}}>{item.emoji}</div>
-                  <div style={{fontSize: '8px', color: '#555'}}>{item.name}</div>
+                <div key={i} style={{background: '#0d0d0d', padding: '15px', border: '1px solid #1a1a1a', borderRadius: '20px', textAlign: 'center'}}>
+                  <div style={{fontSize: '35px'}}>{item.emoji}</div>
+                  <div style={{fontSize: '9px', color: '#555', marginTop: '5px', fontWeight: 800}}>{item.name}</div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div style={{position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: '90%', height: '70px', background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(10px)', borderRadius: '25px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', border: '1px solid #1a1a1a'}}>
-        <div onClick={() => setTab('games')} style={{color: tab === 'games' ? '#00d2ff' : '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold'}}>📦 КЕЙСЫ</div>
-        <div onClick={() => setTab('profile')} style={{color: tab === 'profile' ? '#00d2ff' : '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold'}}>👤 ПРОФИЛЬ</div>
-      </div>
-    </AppContainer>
+        {/* ЭКРАНЫ ОЖИДАНИЯ И ВЫИГРЫША */}
+        {opening && (
+          <WinOverlay>
+            <div style={{fontSize: '100px', animation: pulse + ' 0.8s infinite'}}>📦</div>
+            <h2 style={{letterSpacing: '5px', marginTop: '30px', fontWeight: 900}}>ОТКРЫВАЕМ...</h2>
+          </WinOverlay>
+        )}
+
+        {winItem && (
+          <WinOverlay onClick={() => setWinItem(null)}>
+            <div style={{fontSize: '120px', animation: fadeIn + ' 0.5s ease'}}>{winItem.emoji}</div>
+            <h1 style={{fontSize: '36px', fontWeight: 900, margin: '20px 0 10px 0'}}>ЧИНАЗЕС!</h1>
+            <p style={{fontSize: '18px', color: '#00d2ff', fontWeight: 800}}>{winItem.name}</p>
+            <button style={{marginTop: '40px', padding: '18px 50px', borderRadius: '25px', background: '#fff', color: '#000', border: 'none', fontWeight: 900, fontSize: '16px'}}>В ИНВЕНТАРЬ</button>
+          </WinOverlay>
+        )}
+
+        <BottomNav>
+          <NavItem $active={tab === 'cases'} onClick={() => setTab('cases')}><span>📦</span><label>Кейсы</label></NavItem>
+          <NavItem $active={tab === 'rocket'} onClick={() => setTab('rocket')}><span>🚀</span><label>Ракета</label></NavItem>
+          <NavItem $active={tab === 'profile'} onClick={() => setTab('profile')}><span>👤</span><label>Профиль</label></NavItem>
+        </BottomNav>
+      </AppContainer>
+    </>
   );
-}
+   }
