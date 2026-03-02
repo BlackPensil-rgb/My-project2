@@ -34,7 +34,7 @@ const generateGifts = (): Gift[] => {
       name = "🔥 DEPARTMENT";
       emoji = "🏛️";
       chance = 3;
-      price = 1000000;
+      price = 1000000000;
     }
 
     gifts.push({ id: i, name, emoji, chance, price });
