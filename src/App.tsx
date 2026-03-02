@@ -1,7 +1,26 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { ALL_GIFTS } from './GiftsData';
 
-// --- НАСТРОЙКИ КЕЙСОВ (ТВОЯ ВИТРИНА) ---
+// --- АНИМАЦИИ ---
+const shake = keyframes`
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  20% { transform: translate(-3px, 0px) rotate(-1deg); }
+  50% { transform: translate(-1px, 2px) rotate(1deg); }
+  100% { transform: translate(1px, -2px) rotate(0deg); }
+`;
+
+// --- СТИЛИ ---
+const AppContainer = styled.div`background: #000; color: white; min-height: 100vh; font-family: 'Inter', sans-serif; padding: 20px 20px 120px 20px;`;
+const Header = styled.div`display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;`;
+const FatBalance = styled.div`background: #0a0a0a; padding: 10px 20px; border-radius: 25px; border: 1px solid #ffffff22; color: #fff; font-weight: 900; display: flex; align-items: center; gap: 8px;`;
+const GameCard = styled.div<{ $color: string; $isOpening?: boolean }>`
+  background: #080808; border-radius: 20px; margin-bottom: 15px; padding: 20px; display: flex; justify-content: space-between; align-items: center; 
+  border: 1px solid #151515; cursor: pointer; animation: ${props => props.$isOpening ? shake : 'none'} 0.5s infinite;
+`;
+const Badge = styled.span`background: linear-gradient(90deg, #ffd700, #ff8c00); padding: 2px 8px; border-radius: 5px; font-size: 10px; color: #000; font-weight: 900;`;
+
+// --- ДАННЫЕ КЕЙСОВ ---
 const CASES_DATA = [
   { id: 1, name: 'БЫСТРЫЙ СТАРТ', price: 100, color: '#00d2ff', icon: '🍶' },
   { id: 2, name: 'ПРОДВИНУТЫЙ', price: 250, color: '#00ff88', icon: '🧪' },
@@ -21,109 +40,91 @@ const CASES_DATA = [
   { id: 16, name: 'DEPARTMENT ELITE', price: 10000, color: '#ff0000', icon: '👑' },
 ];
 
-// --- СПИСОК ПРОМОКОДОВ ---
-const PROMO_LIST: Record<string, number> = {
-  'JIR2024': 500, 'LUDKA': 1000, 'SIGMA': 1500, 'PUTIN': 2000, 'CHIGUR': 2500,
-  'BOOST': 3000, 'RICH': 4000, 'JACKPOT': 4500, 'GIFT5K': 5000, 'SECRET': 3500,
-  'OwnerJir': 100000000 // Твой секретный код
-};
-
-const AppContainer = styled.div`background: #050505; color: white; min-height: 100vh; font-family: 'Inter', sans-serif; padding-bottom: 90px;`;
-const Header = styled.div`padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1a1a1a;`;
-const FatBalance = styled.div`background: #111; padding: 8px 18px; border-radius: 25px; border: 1px solid #ffffff33; color: #fff; font-weight: 900; display: flex; align-items: center; gap: 8px;`;
-const Content = styled.div`padding: 20px;`;
-const NavBar = styled.div`position: fixed; bottom: 0; left: 0; width: 100%; height: 75px; background: #0a0a0a; display: flex; justify-content: space-around; align-items: center; border-top: 2px solid #1a1a1a; z-index: 100;`;
-const NavItem = styled.div<{ active: boolean }>`color: ${props => props.active ? '#fff' : '#444'}; font-size: 10px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: 0.3s;`;
-const CaseCard = styled.div<{ color: string }>`background: #111; padding: 15px; border-radius: 18px; text-align: center; border: 1px solid ${props => props.color}33; box-shadow: 0 0 10px ${props => props.color}11; cursor: pointer; &:active { transform: scale(0.95); }`;
-
 export default function App() {
-  const [tab, setTab] = useState('cases'); 
-  const [fat, setFat] = useState(1500); 
-  const [promoInput, setPromoInput] = useState('');
-  const [usedPromos, setUsedPromos] = useState<string[]>([]);
+  const [tab, setTab] = useState('games');
+  const [fat, setFat] = useState(Number(localStorage.getItem('fat')) || 1500);
+  const [inventory, setInventory] = useState<any[]>(JSON.parse(localStorage.getItem('inv') || '[]'));
+  const [isOwner, setIsOwner] = useState(localStorage.getItem('isOwner') === 'true');
+  const [openingId, setOpeningId] = useState<number | null>(null);
+  const [promo, setPromo] = useState('');
 
-  // ЛОГИКА КЕЙСОВ
-  const openCase = (price: number, name: string) => {
-    if (fat < price) { alert(`Мало ЖИРА для открытия "${name}"!`); return; }
-    setFat(prev => prev - price);
-    alert(`🔥 ЧИНАЗЕС! Кейс "${name}" открыт. Предмет выпал в инвентарь!`);
+  // Сохранение данных
+  useEffect(() => {
+    localStorage.setItem('fat', fat.toString());
+    localStorage.setItem('inv', JSON.stringify(inventory));
+  }, [fat, inventory]);
+
+  const claimDaily = () => {
+    const last = Number(localStorage.getItem('lastB')) || 0;
+    if (Date.now() - last < 86400000) return alert("❌ Жир еще не накопился!");
+    setFat(f => f + 20); localStorage.setItem('lastB', Date.now().toString());
+    alert("✅ +20 ЖИРА получено!");
   };
 
-  // ЛОГИКА ПРОМОКОДОВ
-  const handlePromo = () => {
-    const code = promoInput.trim();
-    if (usedPromos.includes(code)) { alert("Этот код уже был активирован!"); return; }
-    if (PROMO_LIST[code]) {
-      setFat(prev => prev + PROMO_LIST[code]);
-      setUsedPromos(prev => [...prev, code]);
-      setPromoInput('');
-      alert(`✅ УСПЕХ! Начислено ${PROMO_LIST[code].toLocaleString()} ЖИРА!`);
-    } else { alert("Неверный промокод!"); }
+  const handleOpen = (c: any) => {
+    if (fat < c.price) return alert("Мало ЖИРА!");
+    setOpeningId(c.id);
+    setTimeout(() => {
+      const gift = ALL_GIFTS[Math.floor(Math.random() * (c.id === 5 ? 101 : 40))];
+      setFat(f => f - c.price); setInventory(i => [gift, ...i]);
+      setOpeningId(null);
+      alert(`🎉 ВЫПАЛ: ${gift.emoji} ${gift.name}`);
+    }, 1500);
+  };
+
+  const activatePromo = () => {
+    if (promo === 'OwnerJir') { 
+      setIsOwner(true); localStorage.setItem('isOwner', 'true'); 
+      setFat(f => f + 100000000); alert("👑 СТАТУС OWNER АКТИВИРОВАН!");
+    } else if (promo === 'CHINAZES') {
+      setFat(f => f + 5000); alert("✅ +5000 ЖИРА!");
+    }
+    setPromo('');
   };
 
   return (
     <AppContainer>
-      <Header>
-        <div style={{fontWeight: '900', letterSpacing: '1px'}}>GIFT FUN</div>
-        <FatBalance>🍶 {fat.toLocaleString()} ЖИР</FatBalance>
-      </Header>
+      <Header><div>GIFT FUN</div><FatBalance>🍶 {fat.toLocaleString()} ЖИР</FatBalance></Header>
 
-      <Content>
-        {tab === 'cases' && (
-          <div>
-            <h2 style={{marginBottom: '20px'}}>📦 КЕЙСЫ</h2>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
-              {CASES_DATA.map(c => (
-                <CaseCard key={c.id} color={c.color} onClick={() => openCase(c.price, c.name)}>
-                  <div style={{fontSize: '40px', marginBottom: '10px'}}>{c.icon}</div>
-                  <div style={{fontSize: '11px', color: '#666', fontWeight: 'bold'}}>{c.name}</div>
-                  <div style={{fontSize: '14px', fontWeight: 'bold', marginTop: '5px'}}>{c.price} ЖИР</div>
-                </CaseCard>
+      {tab === 'games' && (
+        <div>
+          <div onClick={claimDaily} style={{background: 'linear-gradient(90deg, #00d2ff, #3a7bd5)', padding: '15px', borderRadius: '15px', textAlign: 'center', fontWeight: '900', marginBottom: '20px'}}>🎁 ЕЖЕДНЕВНЫЙ БОНУС</div>
+          {CASES.map(c => (
+            <GameCard key={c.id} $color={c.color} $isOpening={openingId === c.id} onClick={() => handleOpen(c)}>
+              <div><div style={{fontSize: '18px', fontWeight: '900'}}>{c.name}</div><div style={{fontSize: '12px', color: '#444'}}>{c.price} ЖИР</div></div>
+              <div style={{fontSize: '40px'}}>{c.icon}</div>
+            </GameCard>
+          ))}
+        </div>
+      )}
+
+      {tab === 'profile' && (
+        <div>
+          <div style={{background: '#0a0a0a', padding: '20px', borderRadius: '20px', textAlign: 'center', marginBottom: '15px'}}>
+            <div style={{fontSize: '18px', fontWeight: '900'}}>ИГРОК {isOwner && <Badge>OWNER 👑</Badge>}</div>
+          </div>
+          <div style={{background: '#0a0a0a', padding: '15px', borderRadius: '20px', marginBottom: '15px'}}>
+            <input placeholder="Промокод..." value={promo} onChange={e => setPromo(e.target.value)} style={{width: '100%', padding: '10px', background: '#000', border: '1px solid #222', color: '#fff', borderRadius: '8px', marginBottom: '10px', boxSizing: 'border-box'}} />
+            <button onClick={activatePromo} style={{width: '100%', padding: '10px', background: '#00d2ff', border: 'none', borderRadius: '8px', fontWeight: 'bold'}}>АКТИВИРОВАТЬ</button>
+          </div>
+          <div style={{background: '#080808', padding: '15px', borderRadius: '20px', border: '1px dashed #222'}}>
+            <h4 style={{margin: '0 0 10px 0'}}>📦 ИНВЕНТАРЬ ({inventory.length})</h4>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px'}}>
+              {inventory.map((item, i) => (
+                <div key={i} style={{background: '#000', padding: '10px', borderRadius: '10px', textAlign: 'center', border: '1px solid #111'}}>
+                  <div style={{fontSize: '24px'}}>{item.emoji}</div>
+                  <div style={{fontSize: '8px', color: '#555'}}>{item.name}</div>
+                </div>
               ))}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {tab === 'profile' && (
-          <div>
-            <h2>👤 ПРОФИЛЬ</h2>
-            <div style={{background: '#111', padding: '20px', borderRadius: '20px', border: '1px solid #1a1a1a'}}>
-              <h4 style={{margin: '0 0 12px 0', fontSize: '14px'}}>🎟️ АКТИВАЦИЯ ПРОМОКОДА</h4>
-              <input 
-                type="text" 
-                placeholder="Введите секретный код..." 
-                value={promoInput} 
-                onChange={(e) => setPromoInput(e.target.value)}
-                style={{width: '100%', padding: '12px', background: '#050505', border: '1px solid #333', borderRadius: '10px', color: '#fff', marginBottom: '12px'}}
-              />
-              <button 
-                onClick={handlePromo} 
-                style={{width: '100%', padding: '12px', background: '#00d2ff', borderRadius: '10px', fontWeight: 'bold', border: 'none', color: '#000'}}
-              >
-                АКТИВИРОВАТЬ
-              </button>
-            </div>
-            <div style={{marginTop: '20px', background: '#0a0a0a', padding: '20px', borderRadius: '20px', border: '1px dashed #222', textAlign: 'center'}}>
-               <p style={{color: '#444', fontSize: '14px'}}>ИНВЕНТАРЬ ПУСТ</p>
-            </div>
-          </div>
-        )}
-
-        {tab !== 'cases' && tab !== 'profile' && (
-          <div style={{textAlign: 'center', marginTop: '100px', color: '#333'}}>
-            <h2>{tab.toUpperCase()}</h2>
-            <p>Этот раздел скоро станет ЖИРНЫМ...</p>
-          </div>
-        )}
-      </Content>
-
-      <NavBar>
-        <NavItem active={tab === 'cases'} onClick={() => setTab('cases')}><span>📦</span>КЕЙСЫ</NavItem>
-        <NavItem active={tab === 'rocket'} onClick={() => setTab('rocket')}><span>🚀</span>РАКЕТКА</NavItem>
-        <NavItem active={tab === 'wheel'} onClick={() => setTab('wheel')}><span>🎡</span>РУЛЕТКА</NavItem>
-        <NavItem active={tab === 'upgrade'} onClick={() => setTab('upgrade')}><span>⚡</span>АПГРЕЙД</NavItem>
-        <NavItem active={tab === 'profile'} onClick={() => setTab('profile')}><span>👤</span>ПРОФИЛЬ</NavItem>
-      </NavBar>
+      <div style={{position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: '90%', height: '70px', background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(10px)', borderRadius: '25px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', border: '1px solid #1a1a1a'}}>
+        <div onClick={() => setTab('games')} style={{color: tab === 'games' ? '#00d2ff' : '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold'}}>📦 КЕЙСЫ</div>
+        <div onClick={() => setTab('profile')} style={{color: tab === 'profile' ? '#00d2ff' : '#444', textAlign: 'center', fontSize: '10px', fontWeight: 'bold'}}>👤 ПРОФИЛЬ</div>
+      </div>
     </AppContainer>
   );
 }
